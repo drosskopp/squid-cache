@@ -1,0 +1,36 @@
+version: '3.7'
+services:
+  squid:
+    image: 'b4tman/squid'
+    container_name: 'rpm-squid'
+    restart: unless-stopped
+    networks:
+      - proxy
+
+    volumes:
+      - /$BASEDIR/data:/var/spool/squid
+    configs:
+      - source: squid.conf
+        target: /etc/squid/squid.conf
+        mode: 0444
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.tcp.routers.squid.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.squid.entrypoints=squid"
+        - "traefik.tcp.routers.squid.service=squid"
+        - "traefik.tcp.services.squid.loadbalancer.server.port=3128" # it seems you always need to give traefik a port so it 'notices' the service
+
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints: [node.labels.software == other]
+
+configs:
+  squid.conf:
+    external: true
+    name: squid.conf_21062203
+
+networks:
+  proxy:
+    external: true
